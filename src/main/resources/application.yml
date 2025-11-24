@@ -2,9 +2,9 @@ spring:
   application:
     name: musica
   datasource:
-    url: jdbc:postgresql://212.85.0.229:5432/player
-    username: gabrielp
-    password: pinheiro1900
+    url: jdbc:postgresql://localhost:5432/player
+    username: ${DB_USERNAME_PROD}
+    password: ${DB_PASSWORD_PROD}
     driver-class-name: org.postgresql.Driver
   jpa:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
@@ -17,4 +17,4 @@ spring:
     baseline-on-migrate: true
 
 server:
-  port: 8080
+  port: 8082

@@ -1,5 +1,7 @@
 package com.pinheiro.musica.controller;
 
+import com.pinheiro.musica.dtos.AlbumNomeDTO;
+import com.pinheiro.musica.dtos.AlbumNomeCapaDTO;
 import com.pinheiro.musica.dtos.AlbumRequestDTO;
 import com.pinheiro.musica.dtos.AlbumResponseDTO;
 import com.pinheiro.musica.service.AlbumService;
@@ -39,9 +41,31 @@ public class AlbumController {
         return ResponseEntity.ok(album);
     }
     
+    // Rota para atualizar nome e dados completos do álbum
     @PutMapping("/{id}")
     public ResponseEntity<AlbumResponseDTO> atualizar(@PathVariable Long id, @RequestBody AlbumRequestDTO albumRequestDTO) {
         AlbumResponseDTO responseDTO = albumService.atualizar(id, albumRequestDTO);
+        return ResponseEntity.ok(responseDTO);
+    }
+    
+    // Rota para atualizar apenas o nome do álbum
+    @PutMapping("/{id}/nome")
+    public ResponseEntity<AlbumResponseDTO> atualizarNome(@PathVariable Long id, @RequestBody AlbumNomeDTO albumNomeDTO) {
+        AlbumResponseDTO responseDTO = albumService.atualizarNome(id, albumNomeDTO);
+        return ResponseEntity.ok(responseDTO);
+    }
+    
+    // Rota para atualizar apenas a capa do álbum
+    @PutMapping("/{id}/capa")
+    public ResponseEntity<AlbumResponseDTO> atualizarCapa(@PathVariable Long id, @RequestParam("capa") MultipartFile capa) {
+        AlbumResponseDTO responseDTO = albumService.atualizarCapa(id, capa);
+        return ResponseEntity.ok(responseDTO);
+    }
+    
+    // Rota para atualizar nome e capa do álbum
+    @PostMapping("/{id}/nome-e-capa")
+    public ResponseEntity<AlbumResponseDTO> atualizarNomeECapa(@PathVariable Long id, @ModelAttribute AlbumNomeCapaDTO albumNomeCapaDTO) {
+        AlbumResponseDTO responseDTO = albumService.atualizarNomeECapa(id, albumNomeCapaDTO);
         return ResponseEntity.ok(responseDTO);
     }
     
@@ -51,7 +75,8 @@ public class AlbumController {
         return ResponseEntity.noContent().build();
     }
     
-    @PostMapping("/{id}/capa")
+    // Mantendo a rota antiga para compatibilidade
+    @PostMapping("/{id}/capa-antiga")
     public ResponseEntity<AlbumResponseDTO> uploadCapa(@PathVariable Long id, @RequestParam("arquivo") MultipartFile arquivo) {
         AlbumResponseDTO responseDTO = albumService.uploadCapa(id, arquivo);
         return ResponseEntity.ok(responseDTO);

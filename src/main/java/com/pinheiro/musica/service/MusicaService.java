@@ -32,7 +32,6 @@ public class MusicaService {
     private ArtistaService artistaService;
     
     public MusicaResponseDTO salvar(MusicaRequestDTO musicaRequestDTO, MultipartFile arquivo) {
-        // Validações
         if (musicaRequestDTO.nome() == null || musicaRequestDTO.nome().isEmpty()) {
             throw new ValidationException("Nome da música é obrigatório");
         }
@@ -49,13 +48,10 @@ public class MusicaService {
             throw new ValidationException("Arquivo de música é obrigatório");
         }
         
-        // Verificar se o álbum existe
         Album album = albumService.buscarPorIdEntidade(musicaRequestDTO.albumId());
         
-        // Verificar se o artista existe
         Artista artista = artistaService.buscarPorIdEntidade(musicaRequestDTO.artistaId());
         
-        // Criar a música
         Musica musica = new Musica();
         musica.setNome(musicaRequestDTO.nome());
         musica.setAlbum(album);
@@ -63,7 +59,6 @@ public class MusicaService {
         musica.setDuracaoSegundos(musicaRequestDTO.duracaoSegundos());
         musica.setDuracaoFormatada(musicaRequestDTO.duracaoFormatada());
         
-        // Salvar o arquivo
         try {
             String caminhoArquivo = armazenamentoService.salvarArquivoMusica(arquivo);
             musica.setCaminhoArquivo(caminhoArquivo);
@@ -71,7 +66,6 @@ public class MusicaService {
             throw new RuntimeException("Erro ao salvar arquivo de música", e);
         }
         
-        // Salvar a música
         Musica novaMusica = musicaRepository.save(musica);
         
         return new MusicaResponseDTO(
@@ -82,7 +76,6 @@ public class MusicaService {
     }
     
     public List<MusicaResponseDTO> listarPorAlbum(Long albumId) {
-        // Verificar se o álbum existe
         albumService.buscarPorIdEntidade(albumId);
         
         List<Musica> musicas = musicaRepository.findByAlbumId(albumId);
@@ -106,7 +99,6 @@ public class MusicaService {
         Musica musica = musicaRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Música não encontrada com ID: " + id));
         
-        // Validações
         if (musicaRequestDTO.nome() == null || musicaRequestDTO.nome().isEmpty()) {
             throw new ValidationException("Nome da música é obrigatório");
         }
@@ -119,13 +111,10 @@ public class MusicaService {
             throw new ValidationException("ID do artista é obrigatório");
         }
         
-        // Verificar se o álbum existe
         Album album = albumService.buscarPorIdEntidade(musicaRequestDTO.albumId());
         
-        // Verificar se o artista existe
         Artista artista = artistaService.buscarPorIdEntidade(musicaRequestDTO.artistaId());
         
-        // Atualizar os dados
         musica.setNome(musicaRequestDTO.nome());
         musica.setAlbum(album);
         musica.setArtista(artista);
@@ -160,5 +149,15 @@ public class MusicaService {
             }
         }
         return null;
+    }
+    
+    public String obterCaminhoArquivoMusica(Long id) {
+        Musica musica = musicaRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Música não encontrada com ID: " + id));
+        
+        if (musica.getCaminhoArquivo() != null) {
+            return musica.getCaminhoArquivo();
+        }
+        throw new ResourceNotFoundException("Arquivo de música não encontrado para o ID: " + id);
     }
 }

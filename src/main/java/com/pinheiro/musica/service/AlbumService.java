@@ -1,5 +1,7 @@
 package com.pinheiro.musica.service;
 
+import com.pinheiro.musica.dtos.AlbumNomeDTO;
+import com.pinheiro.musica.dtos.AlbumNomeCapaDTO;
 import com.pinheiro.musica.dtos.AlbumRequestDTO;
 import com.pinheiro.musica.dtos.AlbumResponseDTO;
 import com.pinheiro.musica.dtos.ArtistaResponseDTO;
@@ -19,6 +21,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -46,7 +51,6 @@ public class AlbumService {
             throw new ValidationException("ID do artista é obrigatório");
         }
         
-        // Verificar se o artista existe
         Artista artista = artistaService.buscarPorIdEntidade(albumRequestDTO.artistaId());
         
         Album album = new Album();
@@ -100,7 +104,6 @@ public class AlbumService {
             throw new ValidationException("ID do artista é obrigatório");
         }
         
-        // Verificar se o artista existe
         Artista artista = artistaService.buscarPorIdEntidade(albumRequestDTO.artistaId());
         
         album.setNome(albumRequestDTO.nome());
@@ -112,16 +115,128 @@ public class AlbumService {
         return converterParaDTO(albumAtualizado);
     }
     
-    public void deletar(Long id) {
-        if (!albumRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Álbum não encontrado com ID: " + id);
+    public AlbumResponseDTO atualizarNome(Long id, AlbumNomeDTO albumNomeDTO) {
+        Album album = albumRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Álbum não encontrado com ID: " + id));
+        
+        if (albumNomeDTO.nome() == null || albumNomeDTO.nome().isEmpty()) {
+            throw new ValidationException("Nome do álbum é obrigatório");
         }
+        
+        album.setNome(albumNomeDTO.nome());
+        Album albumAtualizado = albumRepository.save(album);
+        
+        return converterParaDTO(albumAtualizado);
+    }
+    
+    public AlbumResponseDTO atualizarCapa(Long id, MultipartFile capa) {
+        Album album = albumRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Álbum não encontrado com ID: " + id));
+        
+        // Remover a capa anterior, se existir
+        if (album.getCaminhoCapa() != null && !album.getCaminhoCapa().isEmpty()) {
+            try {
+                Path caminhoCapaAntiga = Paths.get(album.getCaminhoCapa());
+                if (Files.exists(caminhoCapaAntiga)) {
+                    Files.delete(caminhoCapaAntiga);
+                }
+            } catch (IOException e) {
+                System.err.println("Erro ao deletar capa anterior do álbum: " + album.getCaminhoCapa());
+            }
+        }
+        
+        try {
+            String caminhoCapa = armazenamentoService.salvarCapaAlbum(capa);
+            album.setCaminhoCapa(caminhoCapa);
+            Album albumAtualizado = albumRepository.save(album);
+            
+            return converterParaDTO(albumAtualizado);
+        } catch (IOException e) {
+            throw new RuntimeException("Erro ao salvar capa do álbum", e);
+        }
+    }
+    
+    public AlbumResponseDTO atualizarNomeECapa(Long id, AlbumNomeCapaDTO albumNomeCapaDTO) {
+        Album album = albumRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Álbum não encontrado com ID: " + id));
+        
+        if (albumNomeCapaDTO.nome() == null || albumNomeCapaDTO.nome().isEmpty()) {
+            throw new ValidationException("Nome do álbum é obrigatório");
+        }
+        
+        // Remover a capa anterior, se existir
+        if (album.getCaminhoCapa() != null && !album.getCaminhoCapa().isEmpty()) {
+            try {
+                Path caminhoCapaAntiga = Paths.get(album.getCaminhoCapa());
+                if (Files.exists(caminhoCapaAntiga)) {
+                    Files.delete(caminhoCapaAntiga);
+                }
+            } catch (IOException e) {
+                System.err.println("Erro ao deletar capa anterior do álbum: " + album.getCaminhoCapa());
+            }
+        }
+        
+        try {
+            String caminhoCapa = armazenamentoService.salvarCapaAlbum(albumNomeCapaDTO.capa());
+            album.setCaminhoCapa(caminhoCapa);
+        } catch (IOException e) {
+            throw new RuntimeException("Erro ao salvar capa do álbum", e);
+        }
+        
+        album.setNome(albumNomeCapaDTO.nome());
+        Album albumAtualizado = albumRepository.save(album);
+        
+        return converterParaDTO(albumAtualizado);
+    }
+    
+    public void deletar(Long id) {
+        Album album = albumRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Álbum não encontrado com ID: " + id));
+
+        List<Musica> musicas = musicaRepository.findByAlbumId(id);
+        for (Musica musica : musicas) {
+            if (musica.getCaminhoArquivo() != null && !musica.getCaminhoArquivo().isEmpty()) {
+                try {
+                    Path caminhoArquivo = Paths.get(musica.getCaminhoArquivo());
+                    if (Files.exists(caminhoArquivo)) {
+                        Files.delete(caminhoArquivo);
+                    }
+                } catch (IOException e) {
+                    System.err.println("Erro ao deletar arquivo de música: " + musica.getCaminhoArquivo());
+                }
+            }
+            musicaRepository.deleteById(musica.getId());
+        }
+
+        if (album.getCaminhoCapa() != null && !album.getCaminhoCapa().isEmpty()) {
+            try {
+                Path caminhoCapa = Paths.get(album.getCaminhoCapa());
+                if (Files.exists(caminhoCapa)) {
+                    Files.delete(caminhoCapa);
+                }
+            } catch (IOException e) {
+                System.err.println("Erro ao deletar capa do álbum: " + album.getCaminhoCapa());
+            }
+        }
+
         albumRepository.deleteById(id);
     }
     
     public AlbumResponseDTO uploadCapa(Long id, MultipartFile arquivo) {
         Album album = albumRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Álbum não encontrado com ID: " + id));
+        
+        // Remover a capa anterior, se existir
+        if (album.getCaminhoCapa() != null && !album.getCaminhoCapa().isEmpty()) {
+            try {
+                Path caminhoCapaAntiga = Paths.get(album.getCaminhoCapa());
+                if (Files.exists(caminhoCapaAntiga)) {
+                    Files.delete(caminhoCapaAntiga);
+                }
+            } catch (IOException e) {
+                System.err.println("Erro ao deletar capa anterior do álbum: " + album.getCaminhoCapa());
+            }
+        }
         
         try {
             String caminhoCapa = armazenamentoService.salvarCapaAlbum(arquivo);
