@@ -4,6 +4,7 @@ import com.pinheiro.musica.dtos.MusicaRequestDTO;
 import com.pinheiro.musica.dtos.MusicaResponseDTO;
 import com.pinheiro.musica.service.MusicaService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -24,6 +25,9 @@ public class MusicaController {
     
     @Autowired
     private MusicaService musicaService;
+
+    @Value("${app.upload-dir}")
+    private String caminhoPasta;
     
     @PostMapping
     public ResponseEntity<MusicaResponseDTO> criar(
@@ -62,7 +66,8 @@ public class MusicaController {
         try {
             // Obter o caminho do arquivo ao invés do conteúdo completo
             String caminhoArquivo = musicaService.obterCaminhoArquivoMusica(id);
-            Path path = Paths.get(caminhoArquivo);
+            Path pastaBase = Paths.get(this.caminhoPasta);
+            Path path = pastaBase.resolve(caminhoArquivo).normalize();
             
             if (!Files.exists(path)) {
                 return ResponseEntity.notFound().build();

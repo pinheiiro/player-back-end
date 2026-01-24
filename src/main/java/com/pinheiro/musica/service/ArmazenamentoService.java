@@ -1,5 +1,7 @@
 package com.pinheiro.musica.service;
 
+import jakarta.annotation.PostConstruct;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -12,16 +14,26 @@ import java.util.UUID;
 
 @Service
 public class ArmazenamentoService {
-    
+
+    @Value("${app.upload-dir}")
+    private String caminhoPasta;
+
     private static final String DIRETORIO_UPLOADS = "uploads/";
     private static final String DIRETORIO_MUSICAS = DIRETORIO_UPLOADS + "musicas/";
     private static final String DIRETORIO_CAPAS_ALBUM = DIRETORIO_UPLOADS + "capas-album/";
     private static final String DIRETORIO_FOTOS_ARTISTA = DIRETORIO_UPLOADS + "fotos-artista/";
-    
+
+    /*
     public ArmazenamentoService() {
         criarDiretoriosSeNaoExistirem();
     }
-    
+    */
+
+    @PostConstruct
+    public void init() {
+        criarDiretoriosSeNaoExistirem();
+    }
+
     private void criarDiretoriosSeNaoExistirem() {
         criarDiretorioSeNaoExistir(DIRETORIO_UPLOADS);
         criarDiretorioSeNaoExistir(DIRETORIO_MUSICAS);
@@ -31,7 +43,8 @@ public class ArmazenamentoService {
     
     private void criarDiretorioSeNaoExistir(String caminho) {
         try {
-            Path path = Paths.get(caminho);
+            Path pastaBase = Paths.get(this.caminhoPasta);
+            Path path = pastaBase.resolve(caminho).normalize();
             if (!Files.exists(path)) {
                 Files.createDirectories(path);
             }
